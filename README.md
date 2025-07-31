@@ -50,7 +50,7 @@ Pastikan Anda memiliki perangkat lunak berikut terinstal di sistem Anda:
         ```bash
         python -m venv venv
         source venv/bin/activate  # Di Windows: venv\Scripts\activate
-        pip install -r requirements.txt
+        pip install opencv-python mediapipe pyserial serial-tools
         ```
       * [Tambahkan langkah instalasi dependensi spesifik proyek Anda di sini]
 
