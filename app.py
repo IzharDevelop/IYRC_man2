@@ -21,118 +21,112 @@ hands = mp_hands.Hands(
 mp_draw = mp.solutions.drawing_utils
 prev_hand_state = None # 'open' atau 'closed'
 
-def get_hand_state(hand_landmarks):
-    fingers_open = 0
-    thumb_threshold_x = 0.05
+def get_gesture_command(hand_landmarks):
+    """
+    Mendeteksi gestur tangan dan mengembalikan perintah yang sesuai.
+    - V sign (2 jari) -> "ON"
+    - 3 Jari -> "OFF"
+    - Tangan Terbuka -> "O"
+    - Tangan Tertutup -> "C"
+    """
+    # Helper untuk memeriksa apakah jari terbuka
+    def is_finger_open(tip_index, pip_index):
+        return hand_landmarks.landmark[tip_index].y < hand_landmarks.landmark[pip_index].y
 
-    # Jari telunjuk (8 vs 7)
-    if hand_landmarks.landmark[8].y < hand_landmarks.landmark[7].y:
-        fingers_open += 1
-    # Jari tengah (12 vs 11)
-    if hand_landmarks.landmark[12].y < hand_landmarks.landmark[11].y:
-        fingers_open += 1
-    # Jari manis (16 vs 15)
-    if hand_landmarks.landmark[16].y < hand_landmarks.landmark[15].y:
-        fingers_open += 1
-    # Jari kelingking (20 vs 19)
-    if hand_landmarks.landmark[20].y < hand_landmarks.landmark[19].y:
-        fingers_open += 1
+    # Status jari individu
+    index_open = is_finger_open(8, 7)
+    middle_open = is_finger_open(12, 11)
+    ring_open = is_finger_open(16, 15)
+    pinky_open = is_finger_open(20, 19)
+    thumb_open = hand_landmarks.landmark[4].x < hand_landmarks.landmark[3].x # Asumsi tangan kanan
 
-    # Jempol (4 vs 3)
-    if hand_landmarks.landmark[4].x < hand_landmarks.landmark[3].x - thumb_threshold_x or \
-       hand_landmarks.landmark[4].x > hand_landmarks.landmark[3].x + thumb_threshold_x:
-        fingers_open += 1
+    # 1. Cek gestur paling spesifik dulu (V dan 3 jari)
+    # Gestur "V" (ON untuk Pin 8)
+    if index_open and middle_open and not ring_open and not pinky_open:
+        return "ON"
+    # Gestur "Tiga Jari" (OFF untuk Pin 8)
+    if index_open and middle_open and ring_open and not pinky_open:
+        return "OFF"
 
-    if fingers_open >= 4:
-        return 'open'
+    # 2. Cek gestur umum (terbuka/tertutup) jika gestur spesifik tidak ditemukan
+    fingers_open_count = sum([index_open, middle_open, ring_open, pinky_open, thumb_open])
+    
+    # Gestur Tangan Terbuka (O untuk Pin 7)
+    if fingers_open_count >= 4:
+        return 'O'
+    # Gestur Tangan Tertutup (C untuk Pin 7)
     else:
-        return 'closed'
+        return 'C'
 
 # --- Main Application Logic (runs after port is selected) ---
 def start_hand_pose_detection(selected_port):
     global arduino, cap, is_running, prev_hand_state
 
-    # 1. Initialize Arduino Serial Connection
     try:
         arduino = serial.Serial(selected_port, 9600, timeout=1)
         print(f"Koneksi serial ke Arduino berhasil di port {selected_port}!")
-        time.sleep(2) # Give Arduino time to reset
+        time.sleep(2)
     except serial.SerialException:
-        messagebox.showerror("Error Serial", f"Gagal terhubung ke Arduino di {selected_port}. Pastikan port benar dan Arduino terhubung.")
-        arduino = None
-        return # Stop if serial connection fails
+        messagebox.showerror("Error Serial", f"Gagal terhubung ke Arduino di {selected_port}.")
+        return
 
-    # 2. Initialize Camera
-    cap = cv2.VideoCapture(0) # You can add a selection for camera ID later if needed
+    cap = cv2.VideoCapture(0)
     if not cap.isOpened():
-        messagebox.showerror("Error Kamera", "Gagal membuka kamera. Pastikan kamera terhubung dan tidak digunakan aplikasi lain.")
-        # Close Arduino connection if camera fails
-        if arduino:
-            arduino.close()
-        return # Stop if camera fails
+        messagebox.showerror("Error Kamera", "Gagal membuka kamera.")
+        if arduino: arduino.close()
+        return
 
-    # 3. Create OpenCV Window and Start Loop
     is_running = True
-    prev_hand_state = None # Reset state for new run
-
-    print("Program Python dimulai. Tekan 'q' untuk keluar.")
+    prev_hand_state = None
+    print("Program dimulai. Tekan 'q' untuk keluar.")
 
     while is_running and cap.isOpened():
         success, image = cap.read()
-        if not success:
-            print("Gagal membaca frame dari kamera.")
-            break
+        if not success: break
 
         image = cv2.flip(image, 1)
         image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         results = hands.process(image_rgb)
 
+        status_text = "Arahkan tangan ke kamera"
+
         if results.multi_hand_landmarks:
             for hand_landmarks in results.multi_hand_landmarks:
                 mp_draw.draw_landmarks(image, hand_landmarks, mp_hands.HAND_CONNECTIONS)
+                
+                current_command = get_gesture_command(hand_landmarks)
 
-                current_hand_state = get_hand_state(hand_landmarks)
+                if current_command and current_command != prev_hand_state:
+                    command_to_send = current_command
+                    
+                    if command_to_send == "ON":
+                        status_text = "on lamp"
+                    elif command_to_send == "OFF":
+                        status_text = "off lamp"
+                    elif command_to_send == 'O':
+                        status_text = "open pintu"
+                    elif command_to_send == 'C':
+                        status_text = "close"
 
-                if current_hand_state != prev_hand_state:
-                    if current_hand_state == 'open':
-                        command = 'O'
-                        status_text = "Tangan Terbuka (Servo 90)"
-                    else:
-                        command = 'C'
-                        status_text = "Tangan Tertutup (Servo 0)"
-
-                    print(f"Mengirim '{command}' ke Arduino. Status: {status_text}")
+                    print(f"Mengirim: '{command_to_send}' -> {status_text}")
                     if arduino:
                         try:
-                            arduino.write(command.encode('utf-8'))
+                            arduino.write(f"{command_to_send}\n".encode('utf-8'))
                         except serial.SerialException as e:
-                            print(f"Error mengirim data serial: {e}")
-                            arduino.close() # Close connection on error
-                            arduino = None
                             messagebox.showerror("Serial Error", f"Komunikasi serial terputus: {e}")
-                            is_running = False # Stop the main loop
-                            break # Exit inner loop
-                    prev_hand_state = current_hand_state
-                else:
-                    if prev_hand_state == 'open':
-                        status_text = "Tangan Terbuka (Servo 90)"
-                    elif prev_hand_state == 'closed':
-                        status_text = "Tangan Tertutup (Servo 0)"
-                    else:
-                        status_text = "Menunggu deteksi tangan..."
+                            is_running = False
+                            break
+                    prev_hand_state = current_command
 
         else:
-            status_text = "Tidak ada tangan terdeteksi."
-            if prev_hand_state is not None:
-                print("Tangan hilang, reset status.")
-                prev_hand_state = None
+            prev_hand_state = None
+            status_text = "Tidak ada tangan terdeteksi"
 
-        cv2.putText(image, status_text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
+        cv2.putText(image, status_text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2, cv2.LINE_AA)
         cv2.imshow('Hand Pose Detection', image)
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
-            print("Tombol 'q' ditekan, mengakhiri program.")
-            is_running = False # Set flag to stop the loop
+            is_running = False
 
     # Cleanup
     print("Membersihkan sumber daya...")
