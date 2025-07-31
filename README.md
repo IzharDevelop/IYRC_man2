@@ -12,6 +12,7 @@ Untuk menginstal dan menjalankan proyek ini di sistem Anda, ikuti langkah-langka
 ### Prasyarat
 
 Pastikan Anda memiliki perangkat lunak berikut terinstal di sistem Anda:
+C:\Windows\System32\cmd.exe /k "cd C:\Users\MSI GF63\Downloads\detektor-handpose-gui-main && python app.py"
 
   * **Git**: Untuk mengkloning repositori.
       * [Unduh Git](https://git-scm.com/downloads)
