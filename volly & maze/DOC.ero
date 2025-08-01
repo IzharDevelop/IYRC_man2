@@ -1,0 +1,191 @@
+//  welcome to base izhardevelops @izhardev https://github.com//izhardevelop 
+
+
+
+
+// INI ADALAH SEBUAH EXAMPLE & PETUNJUK CODINGAN BUKAN RELASE CODE
+
+
+
+
+// BACA & PAHAMI BAIK-BAIK SEBELUM MEMAKAI
+
+
+//                                    RULES PETUNJUK MEMAKAINNYA.
+
+//  1. BACA_HITAM(low,fast); kecepatan low jika robot terdeteksi miring dan akan meluruskan dirinya sendiri
+//     dengan mengurangi kecepatan di dalah satu DC motor, kecepatan fast berfungsi untuk kecepatan utama
+//     ketika udah lurus dan untuk mengimbangi sisi yang miring. FUNGSI baca_hitam akan berahir ketika
+//     sensor (4,5) (1,2) dan (1,2,3,4,5) terdeteksi garis hitam. 
+
+//  2. Fungsi Belok Dasar (Tanpa Sensor untuk Berhenti)
+//     Fungsi-fungsi ini hanya berbelok selama durasi waktu yang ditentukan:
+
+//    A. kanan(int speedL, int speedR, int duration)
+//       Apa yang dilakukan: Robot berbelok ke kanan untuk waktu tertentu (duration).
+//       Bagaimana berhentinya: Berhenti berbelok setelah durasi waktu yang ditentukan habis.
+//       Fitur tambahan: Tidak ada.
+
+//    B. kiri(int speedL, int speedR, int duration)
+//       Apa yang dilakukan: Robot berbelok ke kiri untuk waktu tertentu (duration).
+//       Bagaimana berhentinya: Berhenti berbelok setelah durasi waktu yang ditentukan habis.
+//       Fitur tambahan: Tidak ada.
+//       Fungsi Belok Berdasarkan Sensor Tengah (_hitam)
+
+//  3. Fungsi-fungsi ini berbelok hingga sensor tengah (IR_3_B) mendeteksi garis:
+
+//    A. putarkanan_hitam(int speedL, int speedR)
+//       Apa yang dilakukan: Robot berbelok ke kanan terus-menerus.
+//       Bagaimana berhentinya: Berhenti berbelok segera setelah sensor tengah (IR_3_B) mendeteksi garis.
+//       Fitur tambahan: Robot berhenti selama 200 milidetik setelah belokan selesai.
+
+//    B. putarkiri_hitam(int speedL, int speedR)
+//       Apa yang dilakukan: Robot berbelok ke kiri terus-menerus.
+//       Bagaimana berhentinya: Berhenti berbelok segera setelah sensor tengah (IR_3_B) mendeteksi garis.
+//       Fitur tambahan: Robot berhenti selama 200 milidetik setelah belokan selesai.
+
+//  4. Fungsi Belok Lanjutan (Dengan baca_hitam & LED)
+//     Fungsi-fungsi ini menggabungkan kemampuan mengikuti garis (baca_hitam) dan indikator LED sebelum
+//     melakukan belok:
+
+//    A.kananhitam(int speedL, int speedR, int duration)
+//      Apa yang dilakukan:
+//      Pertama, robot mengikuti garis menggunakan baca_hitam sampai kondisi berhentinya terpenuhi.
+//      Lampu indikator kanan (signR) dinyalakan.
+//      Kemudian, robot melakukan belok kanan dasar selama durasi tertentu (kanan).
+//      Lampu indikator dimatikan (signO).
+//      Perbedaan utama: Menggabungkan line following otomatis sebelum belokan, ditambah indikasi LED.
+
+//   B. putarkananhitam(int speedL, int speedR)
+//      Apa yang dilakukan:
+//      Pertama, robot mengikuti garis menggunakan baca_hitam sampai kondisi berhentinya terpenuhi.
+//      Lampu indikator kanan (signR) dinyalakan.
+//      Kemudian, robot melakukan belok kanan hingga sensor tengah mendeteksi garis (putarkanan_hitam).
+//      Lampu indikator dimatikan (signO).
+//      Perbedaan utama: Menggabungkan line following otomatis sebelum belokan, ditambah indikasi LED,
+//      dan belokan berhenti berdasarkan deteksi sensor tengah.
+
+//   C. kirihitam(int speedL, int speedR, int duration)
+//      Apa yang dilakukan: Mirip dengan kananhitam, tetapi untuk belok kiri.
+//      Robot mengikuti garis (baca_hitam).
+//      Lampu indikator kiri (signL) dinyalakan.
+//      Melakukan belok kiri dasar selama durasi tertentu (kiri).
+//      Lampu indikator dimatikan (signO).
+//      Perbedaan utama: Menggabungkan line following otomatis sebelum belokan, ditambah indikasi LED.
+
+//   D. putarkirihitam(int speedL, int speedR)
+//      Apa yang dilakukan: Mirip dengan putarkananhitam, tetapi untuk belok kiri.
+//      Robot mengikuti garis (baca_hitam).
+//      Lampu indikator kiri (signL) dinyalakan.
+//      Melakukan belok kiri hingga sensor tengah mendeteksi garis (putarkiri_hitam).
+//      Lampu indikator dimatikan (signO).
+//      Perbedaan utama: Menggabungkan line following otomatis sebelum belokan, ditambah indikasi LED,
+//      dan belokan berhenti berdasarkan deteksi sensor tengah.
+
+
+
+
+//   Singkatnya:
+
+// Fungsi tanpa akhiran _hitam (misalnya kanan, kiri) adalah belokan dasar dengan durasi tetap tanpa melibatkan
+// sensor untuk mengakhirinya.
+
+// Fungsi dengan putar_hitam (misalnya putarkanan_hitam, putarkiri_hitam) adalah belokan yang terus-menerus
+// hingga sensor tengah mendeteksi garis.
+
+// Fungsi dengan awalan kananhitam atau kirihitam (misalnya kananhitam, putarkanan_hitam) adalah fungsi yang
+// lebih kompleks yang pertama-tama menjalankan baca_hitam (mengikuti garis), menyalakan indikator LED, dan
+// baru kemudian melakukan jenis belokan yang diinginkan.
+
+
+
+
+
+
+//```````````````````````````````````````CODINGAN V1 PAKE LIBRARY`````````````````````````````````````````````\\
+
+
+#include "functions_codes.h" 
+#include "izhardev.h" // library ini bisa di dapatkan dari https://github.com/izhardevelop/iyrc/
+
+
+void main(void){ 
+    mcu_initialization();
+    baca_hitam(1,5);
+    maju(5,100); // sebagai start dibelakang garis
+    
+    //misi pertama
+    baca_hitam(1,5); // belokan pertama
+    baca_hitam(1,5);
+    putarkanan_hitam(8,3);//belokan kedua
+    baca_hitam(1,5);
+    maju(5,100);   // perempatan di tengah line
+    
+    baca_hitam(1,5);
+    putarkanan_hitam(8,3); // menuju start line
+    baca_hitam(1,5);
+    
+    putarkanan_hitam(8,3);
+    baca_hitam(1,5);
+    stop(500); // cek point 
+    mundur(5,100);
+    putarkiri_hitam(8,3); // kembali ke posisi start
+    //end misi pertama
+    
+    
+    //misi kedua
+    baca_hitam(1,5); // belokan pertama
+    baca_hitam(1,5);
+    maju(5,100 );  //belokan kedua lurus
+    
+    baca_hitam(1,50); // belokan paling ujung
+    baca_hitam(1,5);
+    maju(5,100); // belokan menuju base tetap lurus
+    
+    baca_hitam(1,5); // posisi start
+    putarkanan_hitam(8,3);
+    baca_hitam(1,50); // base point
+    stop(500); // cek point
+    mundur(5,100);
+    putarkiri_hitam(8,3); // kembali ke posisi start
+    // end misi kedua
+    
+    
+    
+    //misi ketiga
+    baca_hitam(1,5); 
+    putarkanan_hitam(8,3);// belok di belokan pertama
+    baca_hitam(1,5);
+    
+    putarkiri_hitam(3,4);// belok ke lokasi kebakaran pertama
+    baca_hitam(1,5);
+    stop(500); // time pemadaman
+    mundur(5,250);
+    putarkanan_hitam(1,5); // kembali ke posisi awal
+    baca_hitam(1,5);
+    
+    maju(5,100); // perempatan tengah line
+    baca_hitam(1,5);
+    putarkiri_hitam(3,8);// belok ke lokasi kebakaran kedua
+    baca_hitam(1,5);
+    stop(500); // time pemadaman
+    mundur(5,250);
+    putarkanan_hitam(1,5); // kembali ke posisi awal
+    baca_hitam(1,5);
+    
+    putarkanan_hitam(3,8); // belok ke lokasi kebakaran tarahir
+    baca_hitam(1,5);
+    stop(500); // time pemadaman
+    mundur(5,250);
+    putarkiri_hitam(8,3); // kembali ke posisi semula
+    baca_hitam(1,5);
+    
+    putarkanan_hitam(3,8); // belokan paling ujung
+    baca_hitam(1,5);
+    maju(5,100);
+    baca_hitam(1,4);
+    stop(9999);
+    //end misi bismillah sekali coba
+    
+    
+}

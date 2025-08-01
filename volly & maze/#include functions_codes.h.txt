@@ -1,0 +1,25 @@
+#include "functions_codes.h" 
+#include "izhardev.h"
+
+void main(void){ 
+    mcu_initialization();
+    //maju(10,10);
+    baca_hitam(7,5);
+    kananhitam(8,4,250);
+    //ca_hitam(8,4);
+    baca_hitam(7,5);
+    //ca_hitam(8,4);
+    kananhitam(8,4,400);
+    stop(4000);
+    mundur(8,400);
+    putarkirihitam(4,8);
+    baca_hitam(7,6);
+    maju(5,800);
+    baca_hitam(7,6);
+    maju(5,800);
+    kananhitam(8,4,250);
+    baca_hitam(8,4);
+    stop(4000);
+    mundur(4,500);
+    putarkirihitam(4,8);
+}
